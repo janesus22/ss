@@ -1,0 +1,31 @@
+name: Publish Docker Image
+
+on:
+  push:
+  schedule:
+    - cron: '0 0 * * *'  # every day at midnight
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Run script
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo ::set-env name=VERSION::$(bash check.sh)
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v1
+        if: "!startsWith('${{ env.VERSION }}', 'pass:')"
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: xjasonlyu/jellyfin
+          tags: latest,${{ env.VERSION }}
