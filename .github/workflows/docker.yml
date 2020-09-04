@@ -3,7 +3,7 @@ name: Publish Docker Image
 on:
   push:
   schedule:
-    - cron: '0 0 * * *'  # every day at midnight
+    - cron: '0 0 * * *'
 
 jobs:
   build:
@@ -14,12 +14,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Run script
+      - name: Run script to check version
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
-          echo ::set-env name=VERSION::$(bash check.sh)
+          echo ::set-env name=VERSION::$(bash check-version.sh)
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v1
