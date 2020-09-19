@@ -3,7 +3,7 @@ name: Publish Docker Image
 on:
   push:
   schedule:
-    - cron: '0 0 * * *' # run at every 00:00
+    - cron: '0 0 * * *' # run at every 00:00 UTC
 
 jobs:
   build:
