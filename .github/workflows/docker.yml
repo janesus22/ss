@@ -15,17 +15,40 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Run script to check version
+        id: shell
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
-          echo ::set-env name=VERSION::$(bash check-version.sh)
+          MAJOR_VERSION="10"
+          DOCKER_HUB_UP="linuxserver/jellyfin"
+          DOCKER_HUB_DOWN="xjasonlyu/jellyfin"
+          
+          AUTH_DOMAIN="auth.docker.io"
+          AUTH_SERVICE="registry.docker.io"
+          AUTH_OFFLINE_TOKEN="1"
+          AUTH_CLIENT_ID="shell"
+          API_DOMAIN="registry-1.docker.io"
+          
+          TOKEN=$(curl -s -f -X GET -u ${DOCKER_USERNAME}:${DOCKER_PASSWORD} "https://${AUTH_DOMAIN}/token?service=${AUTH_SERVICE}&scope=repository:${DOCKER_HUB_UP}:pull&offline_token=${AUTH_OFFLINE_TOKEN}&client_id=${AUTH_CLIENT_ID}" | jq -r '.token')
+          VERSION_UP=$(curl -s -f -H "Authorization: Bearer ${TOKEN}" https://${API_DOMAIN}/v2/${DOCKER_HUB_UP}/tags/list | jq -r '.tags[]' | grep -E '^'"${MAJOR_VERSION}"'\.[0-9.]+' | sort --version-sort | tail -n 1)
+          [ "$?" -ne 0 ] && exit 1
+          
+          TOKEN=$(curl -s -f -X GET -u ${DOCKER_USERNAME}:${DOCKER_PASSWORD} "https://${AUTH_DOMAIN}/token?service=${AUTH_SERVICE}&scope=repository:${DOCKER_HUB_DOWN}:pull&offline_token=${AUTH_OFFLINE_TOKEN}&client_id=${AUTH_CLIENT_ID}" | jq -r '.token')
+          VERSION_DOWN=$(curl -s -f -H "Authorization: Bearer ${TOKEN}" https://${API_DOMAIN}/v2/${DOCKER_HUB_DOWN}/tags/list | jq -r '.tags[]' | grep -E '^[0-9.]+' | sort --version-sort | tail -n 1)
+          [ "$?" -ne 0 ] && exit 1
+          
+          if [ "${VERSION_UP}" == "${VERSION_DOWN}" ]; then
+              echo ::set-output name=version::"pass:${VERSION_UP}"
+          else
+              echo ::set-output name=version::"${VERSION_UP}"
+          fi
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v1
-        if: env.VERSION != '' && !startsWith(env.VERSION, 'pass:')
+        if: steps.shell.outputs.version != '' && !startsWith(steps.shell.outputs.version, 'pass:')
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: xjasonlyu/jellyfin
-          tags: latest,${{ env.VERSION }}
+          tags: latest,${{ steps.shell.outputs.version }}
