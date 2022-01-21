@@ -43,6 +43,10 @@ ENV JELLYFIN_CACHE_DIR=/config/cache
 EXPOSE 8096
 VOLUME /config /media
 
-ENTRYPOINT [ "/usr/bin/jellyfin", \
-    "--ffmpeg", "/usr/lib/jellyfin-ffmpeg/ffmpeg", \
-    "--webdir", "/usr/share/jellyfin/web" ]
+ENTRYPOINT ["./jellyfin/jellyfin", \
+    "--datadir", "/config", \
+    "--cachedir", "/cache", \
+    "--ffmpeg", "/usr/lib/jellyfin-ffmpeg/ffmpeg"]
+    
+    
+
